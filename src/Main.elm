@@ -83,6 +83,7 @@ type Msg
     | Shuffle
     | SelectedCard Cards
     | MovedCard Cards
+    | TurnOverCard Cards
     | StartOver
 
 
@@ -149,6 +150,9 @@ update msg model =
                 MovedCard card ->
                     ( Playing (moveCard playingmodel card), Cmd.none )
 
+                TurnOverCard card ->
+                    ( Playing (turnOverCard playingmodel card), Cmd.none )
+
                 StartOver ->
                     startOver
 
@@ -157,38 +161,74 @@ update msg model =
 --  HELPER FUNCTIONS
 
 
-moveCard : PlayingModel -> Cards -> PlayingModel
-moveCard playingmodel card =
+turnOverCard : PlayingModel -> Cards -> PlayingModel
+turnOverCard playingmodel card =
     let
-        active_card =
-            decodeActiveCard playingmodel.active_card
-
         columns =
             playingmodel.columns
     in
     case getColumnWithCard columns card of
         Just pile ->
             { playingmodel
-                | columns = updateColumn (List.append pile active_card) pile columns
+                | columns =
+                    updateColumn
+                        (List.append
+                            (List.filter (\c -> c /= card) pile)
+                            [ { card | orientation = FaceUp } ]
+                        )
+                        pile
+                        columns
             }
 
         Nothing ->
             playingmodel
 
 
+moveCard : PlayingModel -> Cards -> PlayingModel
+moveCard playingmodel card =
+    let
+        columns =
+            playingmodel.columns
+    in
+    case getColumnWithCard columns card of
+        Just pile ->
+            case playingmodel.active_card of
+                Just active_card ->
+                    { playingmodel
+                        | columns = addCardToColumn (removeCardFromColumn columns active_card) card active_card
+                        , active_card = Nothing
+                    }
+
+                Nothing ->
+                    playingmodel
+
+        Nothing ->
+            playingmodel
+
+
+addCardToColumn : Columns -> Cards -> Cards -> Columns
+addCardToColumn columns card active_card =
+    case getColumnWithCard columns card of
+        Just pile ->
+            updateColumn (List.append pile [ active_card ]) pile columns
+
+        Nothing ->
+            columns
+
+
+removeCardFromColumn : Columns -> Cards -> Columns
+removeCardFromColumn columns card =
+    case getColumnWithCard columns card of
+        Just pile ->
+            updateColumn (List.filter (\c -> c /= card) pile) pile columns
+
+        Nothing ->
+            columns
+
+
 shuffleCards : Pile -> Cmd Msg
 shuffleCards deck =
     Random.generate ShuffledCards (Random.List.shuffle deck)
-
-
-decodeActiveCard : Maybe Cards -> List Cards
-decodeActiveCard active_card =
-    case active_card of
-        Nothing ->
-            []
-
-        Just card ->
-            [ card ]
 
 
 dealCards : ( Pile, Columns ) -> ( Pile, Columns )
@@ -274,10 +314,28 @@ drawCard model =
             model
 
 
-getColumnWithCard : { a | a : Pile } -> Cards -> Maybe Pile
-getColumnWithCard { a } card =
+getColumnWithCard : { a | a : Pile, b : Pile, c : Pile, d : Pile, e : Pile, f : Pile, g : Pile } -> Cards -> Maybe Pile
+getColumnWithCard { a, b, c, d, e, f, g } card =
     if List.member card a then
         Just a
+
+    else if List.member card b then
+        Just b
+
+    else if List.member card c then
+        Just c
+
+    else if List.member card d then
+        Just d
+
+    else if List.member card e then
+        Just e
+
+    else if List.member card f then
+        Just f
+
+    else if List.member card g then
+        Just g
 
     else
         Nothing
@@ -483,8 +541,23 @@ viewListAllCardsInDeck model =
 
 viewColumn : List Cards -> Maybe Cards -> List (Element Msg)
 viewColumn cardcolumn active_card =
-    List.map (\c -> el [] (viewCard c active_card))
-        cardcolumn
+    let
+        length =
+            List.length cardcolumn
+    in
+    List.take (length - 1) cardcolumn
+        |> List.map
+            (\c ->
+                el [] (viewCard c active_card)
+            )
+        |> (\els ->
+                List.map
+                    (\c ->
+                        el [] (viewTopCard c active_card)
+                    )
+                    (List.drop (length - 1) cardcolumn)
+                    |> List.append els
+           )
 
 
 viewCard : Cards -> Maybe Cards -> Element Msg
@@ -492,6 +565,16 @@ viewCard card active_card =
     case card.orientation of
         FaceDown ->
             el [ Background.color (rgb 0.5 0.5 0.5) ] (text "Facedown")
+
+        FaceUp ->
+            el [ Background.color (rgb 0.9 0.9 0.9) ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
+
+
+viewTopCard : Cards -> Maybe Cards -> Element Msg
+viewTopCard card active_card =
+    case card.orientation of
+        FaceDown ->
+            el [ Background.color (rgb 0.5 0.5 0.5), onClick (TurnOverCard card), pointer ] (text "Facedown")
 
         FaceUp ->
             case active_card of
