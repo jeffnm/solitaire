@@ -1,10 +1,13 @@
 module Cards exposing (..)
 
+import Html.Attributes exposing (value)
+
 
 type alias Cards =
     { suit : Suit
     , value : CardValue
     , orientation : CardOrientation
+    , color : CardColor
     }
 
 
@@ -22,6 +25,11 @@ type Suit
     | Spades
     | Hearts
     | Diamonds
+
+
+type CardColor
+    = Red
+    | Black
 
 
 cardValueToString : CardValue -> String
@@ -42,6 +50,13 @@ cardValueToString value =
 
             else
                 String.fromInt card
+
+
+cardValuetoInt : CardValue -> Int
+cardValuetoInt value =
+    case value of
+        CardValue card ->
+            card
 
 
 suitToString : Suit -> String
@@ -70,16 +85,16 @@ new52Deck =
             List.range 1 13
 
         listclubs =
-            List.map (\c -> Cards Clubs (CardValue c) FaceDown) cardspersuit
+            List.map (\c -> Cards Clubs (CardValue c) FaceDown Black) cardspersuit
 
         listspades =
-            List.map (\c -> Cards Spades (CardValue c) FaceDown) cardspersuit
+            List.map (\c -> Cards Spades (CardValue c) FaceDown Black) cardspersuit
 
         listdiamonds =
-            List.map (\c -> Cards Diamonds (CardValue c) FaceDown) cardspersuit
+            List.map (\c -> Cards Diamonds (CardValue c) FaceDown Red) cardspersuit
 
         listhearts =
-            List.map (\c -> Cards Hearts (CardValue c) FaceDown) cardspersuit
+            List.map (\c -> Cards Hearts (CardValue c) FaceDown Red) cardspersuit
     in
     List.append deck listclubs
         |> List.append listspades

@@ -77,12 +77,30 @@ type alias Columns =
     }
 
 
+type ColumnNames
+    = Col_A
+    | Col_B
+    | Col_C
+    | Col_D
+    | Col_E
+    | Col_F
+    | Col_G
+
+
+type EndPileNames
+    = End_A
+    | End_B
+    | End_C
+    | End_D
+
+
 type Msg
     = ShuffledCards Pile
     | CardDrawn
     | Shuffle
     | SelectedCard Cards
     | MovedCard Cards
+    | MovedCardToEmptyColumn ColumnNames
     | TurnOverCard Cards
     | StartOver
 
@@ -98,7 +116,7 @@ initdata =
     , discard = []
     , endpiles = { a = [], b = [], c = [], d = [] }
     , columns = { a = [], b = [], c = [], d = [], e = [], f = [], g = [] }
-    , shuffle_count = 0
+    , shuffle_count = -1
     , active_card = Nothing
     }
 
@@ -124,7 +142,7 @@ update msg model =
                     ( Playing { playingmodel | active_card = Nothing }, shuffleCards playingmodel.discard )
 
                 ShuffledCards cards ->
-                    if playingmodel.shuffle_count == 0 then
+                    if playingmodel.shuffle_count == -1 then
                         case dealCards ( cards, playingmodel.columns ) of
                             ( d, c ) ->
                                 ( Playing { playingmodel | deck = d, columns = c, shuffle_count = playingmodel.shuffle_count + 1 }, Cmd.none )
@@ -150,6 +168,9 @@ update msg model =
                 MovedCard card ->
                     ( Playing (moveCard playingmodel card), Cmd.none )
 
+                MovedCardToEmptyColumn column ->
+                    ( Playing (moveCardToEmptyColumn playingmodel column), Cmd.none )
+
                 TurnOverCard card ->
                     ( Playing (turnOverCard playingmodel card), Cmd.none )
 
@@ -159,6 +180,89 @@ update msg model =
 
 
 --  HELPER FUNCTIONS
+
+
+moveCardToEmptyColumn : PlayingModel -> ColumnNames -> PlayingModel
+moveCardToEmptyColumn playingmodel column =
+    let
+        columns =
+            playingmodel.columns
+
+        newColumnsA =
+            \col active_card -> { col | a = [ active_card ] }
+
+        newColumnsB =
+            \col active_card -> { col | b = [ active_card ] }
+
+        newColumnsC =
+            \col active_card -> { col | c = [ active_card ] }
+
+        newColumnsD =
+            \col active_card -> { col | d = [ active_card ] }
+
+        newColumnsE =
+            \col active_card -> { col | e = [ active_card ] }
+
+        newColumnsF =
+            \col active_card -> { col | f = [ active_card ] }
+
+        newColumnsG =
+            \col active_card -> { col | g = [ active_card ] }
+    in
+    case playingmodel.active_card of
+        Just active_card ->
+            case column of
+                Col_A ->
+                    { playingmodel
+                        | columns = newColumnsA (removeCardFromColumn columns active_card) active_card
+                        , active_card = Nothing
+                        , discard = removeCardFromDiscard playingmodel.discard active_card
+                    }
+
+                Col_B ->
+                    { playingmodel
+                        | columns = newColumnsB (removeCardFromColumn columns active_card) active_card
+                        , active_card = Nothing
+                        , discard = removeCardFromDiscard playingmodel.discard active_card
+                    }
+
+                Col_C ->
+                    { playingmodel
+                        | columns = newColumnsC (removeCardFromColumn columns active_card) active_card
+                        , active_card = Nothing
+                        , discard = removeCardFromDiscard playingmodel.discard active_card
+                    }
+
+                Col_D ->
+                    { playingmodel
+                        | columns = newColumnsD (removeCardFromColumn columns active_card) active_card
+                        , active_card = Nothing
+                        , discard = removeCardFromDiscard playingmodel.discard active_card
+                    }
+
+                Col_E ->
+                    { playingmodel
+                        | columns = newColumnsE (removeCardFromColumn columns active_card) active_card
+                        , active_card = Nothing
+                        , discard = removeCardFromDiscard playingmodel.discard active_card
+                    }
+
+                Col_F ->
+                    { playingmodel
+                        | columns = newColumnsF (removeCardFromColumn columns active_card) active_card
+                        , active_card = Nothing
+                        , discard = removeCardFromDiscard playingmodel.discard active_card
+                    }
+
+                Col_G ->
+                    { playingmodel
+                        | columns = newColumnsG (removeCardFromColumn columns active_card) active_card
+                        , active_card = Nothing
+                        , discard = removeCardFromDiscard playingmodel.discard active_card
+                    }
+
+        Nothing ->
+            playingmodel
 
 
 turnOverCard : PlayingModel -> Cards -> PlayingModel
@@ -194,16 +298,35 @@ moveCard playingmodel card =
         Just pile ->
             case playingmodel.active_card of
                 Just active_card ->
-                    { playingmodel
-                        | columns = addCardToColumn (removeCardFromColumn columns active_card) card active_card
-                        , active_card = Nothing
-                    }
+                    case compareColumnCards active_card card of
+                        True ->
+                            { playingmodel
+                                | columns = addCardToColumn (removeCardFromColumn columns active_card) card active_card
+                                , active_card = Nothing
+                                , discard = removeCardFromDiscard playingmodel.discard active_card
+                            }
+
+                        False ->
+                            playingmodel
 
                 Nothing ->
                     playingmodel
 
         Nothing ->
             playingmodel
+
+
+compareColumnCards : Cards -> Cards -> Bool
+compareColumnCards active_card target_card =
+    if cardValuetoInt target_card.value == cardValuetoInt active_card.value + 1 then
+        if target_card.color /= active_card.color then
+            True
+
+        else
+            False
+
+    else
+        False
 
 
 addCardToColumn : Columns -> Cards -> Cards -> Columns
@@ -224,6 +347,11 @@ removeCardFromColumn columns card =
 
         Nothing ->
             columns
+
+
+removeCardFromDiscard : Pile -> Cards -> Pile
+removeCardFromDiscard discard card =
+    List.filter (\c -> c /= card) discard
 
 
 shuffleCards : Pile -> Cmd Msg
@@ -414,7 +542,7 @@ viewUI model =
 viewHeader : PlayingModel -> Element Msg
 viewHeader model =
     row [ width fill, centerY, spacing 30, padding 30 ]
-        [ el [] (text "header")
+        [ el [] (text ("header " ++ String.fromInt model.shuffle_count))
         ]
 
 
@@ -452,12 +580,12 @@ viewDiscardPile cards active_card =
             if count > shownCards then
                 column []
                     [ el [] (text (buriedCardsString ++ " Hidden"))
-                    , el [] (viewCard card active_card)
+                    , el [] (viewTopCard card active_card)
                     ]
 
             else
                 column []
-                    [ el [] (viewCard card active_card)
+                    [ el [] (viewTopCard card active_card)
                     ]
 
 
@@ -478,31 +606,31 @@ viewColumns model =
     row [ width fill, spacing 30, padding 30 ]
         [ column [ alignTop, spacing 30 ]
             [ paragraph [] [ el [] (text "Column A") ]
-            , column [ spacing 10 ] (viewColumn model.columns.a model.active_card)
+            , column [ spacing 10 ] (viewColumn Col_A model.columns.a model.active_card)
             ]
         , column [ alignTop, spacing 30 ]
             [ paragraph [] [ el [] (text "Column B") ]
-            , column [ spacing 10 ] (viewColumn model.columns.b model.active_card)
+            , column [ spacing 10 ] (viewColumn Col_B model.columns.b model.active_card)
             ]
         , column [ alignTop, spacing 30 ]
             [ paragraph [] [ el [] (text "Column C") ]
-            , column [ spacing 10 ] (viewColumn model.columns.c model.active_card)
+            , column [ spacing 10 ] (viewColumn Col_C model.columns.c model.active_card)
             ]
         , column [ alignTop, spacing 30 ]
             [ paragraph [] [ el [] (text "Column D") ]
-            , column [ spacing 10 ] (viewColumn model.columns.d model.active_card)
+            , column [ spacing 10 ] (viewColumn Col_D model.columns.d model.active_card)
             ]
         , column [ alignTop, spacing 30 ]
             [ paragraph [] [ el [] (text "Column E") ]
-            , column [ spacing 10 ] (viewColumn model.columns.e model.active_card)
+            , column [ spacing 10 ] (viewColumn Col_E model.columns.e model.active_card)
             ]
         , column [ alignTop, spacing 30 ]
             [ paragraph [] [ el [] (text "Column F") ]
-            , column [ spacing 10 ] (viewColumn model.columns.f model.active_card)
+            , column [ spacing 10 ] (viewColumn Col_F model.columns.f model.active_card)
             ]
         , column [ alignTop, spacing 30 ]
             [ paragraph [] [ el [] (text "Column G") ]
-            , column [ spacing 10 ] (viewColumn model.columns.g model.active_card)
+            , column [ spacing 10 ] (viewColumn Col_G model.columns.g model.active_card)
             ]
         ]
 
@@ -539,25 +667,29 @@ viewListAllCardsInDeck model =
             List.map (\c -> column [] [ viewCard c model.active_card ]) cards
 
 
-viewColumn : List Cards -> Maybe Cards -> List (Element Msg)
-viewColumn cardcolumn active_card =
+viewColumn : ColumnNames -> List Cards -> Maybe Cards -> List (Element Msg)
+viewColumn columnName cardcolumn active_card =
     let
         length =
             List.length cardcolumn
     in
-    List.take (length - 1) cardcolumn
-        |> List.map
-            (\c ->
-                el [] (viewCard c active_card)
-            )
-        |> (\els ->
-                List.map
-                    (\c ->
-                        el [] (viewTopCard c active_card)
-                    )
-                    (List.drop (length - 1) cardcolumn)
-                    |> List.append els
-           )
+    if length > 0 then
+        List.take (length - 1) cardcolumn
+            |> List.map
+                (\c ->
+                    el [] (viewCard c active_card)
+                )
+            |> (\els ->
+                    List.map
+                        (\c ->
+                            el [] (viewTopCard c active_card)
+                        )
+                        (List.drop (length - 1) cardcolumn)
+                        |> List.append els
+               )
+
+    else
+        [ el [ onClick (MovedCardToEmptyColumn columnName) ] (text "Empty Column") ]
 
 
 viewCard : Cards -> Maybe Cards -> Element Msg
@@ -583,7 +715,7 @@ viewTopCard card active_card =
 
                 Just c ->
                     if c == card then
-                        el [ Background.color (rgb 0 1 0), onClick (SelectedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit ++ " ACTIVE"))
+                        el [ Background.color (rgb 0 1 0), onClick (SelectedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
 
                     else
                         el [ Background.color (rgb 0.5 0.5 0.5), onClick (MovedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
