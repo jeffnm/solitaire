@@ -101,6 +101,7 @@ type Msg
     | SelectedCard Cards
     | MovedCard Cards
     | MovedCardToEmptyColumn ColumnNames
+    | MovedCardToEndPile EndPileNames
     | TurnOverCard Cards
     | StartOver
 
@@ -171,6 +172,9 @@ update msg model =
                 MovedCardToEmptyColumn column ->
                     ( Playing (moveCardToEmptyColumn playingmodel column), Cmd.none )
 
+                MovedCardToEndPile endpile ->
+                    ( Playing (moveCardToEndPile playingmodel endpile), Cmd.none )
+
                 TurnOverCard card ->
                     ( Playing (turnOverCard playingmodel card), Cmd.none )
 
@@ -180,6 +184,84 @@ update msg model =
 
 
 --  HELPER FUNCTIONS
+
+
+moveCardToEndPile : PlayingModel -> EndPileNames -> PlayingModel
+moveCardToEndPile playingmodel endpile =
+    let
+        endpiles =
+            playingmodel.endpiles
+
+        newEndPilesA =
+            \ep active_card -> { ep | a = List.append ep.a [ active_card ] }
+
+        newEndPilesB =
+            \ep active_card -> { ep | b = List.append ep.b [ active_card ] }
+
+        newEndPilesC =
+            \ep active_card -> { ep | c = List.append ep.c [ active_card ] }
+
+        newEndPilesD =
+            \ep active_card -> { ep | d = List.append ep.d [ active_card ] }
+    in
+    case playingmodel.active_card of
+        Just active_card ->
+            case endpile of
+                End_A ->
+                    if endpileIsStackable active_card endpiles.a then
+                        { playingmodel | endpiles = newEndPilesA endpiles active_card, columns = removeCardFromColumn playingmodel.columns active_card, discard = removeCardFromDiscard playingmodel.discard active_card, active_card = Nothing }
+
+                    else
+                        playingmodel
+
+                End_B ->
+                    if endpileIsStackable active_card endpiles.b then
+                        { playingmodel | endpiles = newEndPilesB endpiles active_card, columns = removeCardFromColumn playingmodel.columns active_card, discard = removeCardFromDiscard playingmodel.discard active_card, active_card = Nothing }
+
+                    else
+                        playingmodel
+
+                End_C ->
+                    if endpileIsStackable active_card endpiles.c then
+                        { playingmodel | endpiles = newEndPilesC endpiles active_card, columns = removeCardFromColumn playingmodel.columns active_card, discard = removeCardFromDiscard playingmodel.discard active_card, active_card = Nothing }
+
+                    else
+                        playingmodel
+
+                End_D ->
+                    if endpileIsStackable active_card endpiles.d then
+                        { playingmodel | endpiles = newEndPilesD endpiles active_card, columns = removeCardFromColumn playingmodel.columns active_card, discard = removeCardFromDiscard playingmodel.discard active_card, active_card = Nothing }
+
+                    else
+                        playingmodel
+
+        Nothing ->
+            playingmodel
+
+
+endpileIsStackable : Cards -> Pile -> Basics.Bool
+endpileIsStackable active_card endpile_cards =
+    let
+        length =
+            List.length endpile_cards
+    in
+    if length > 0 then
+        List.drop (length - 1) endpile_cards
+            |> List.map
+                (\c ->
+                    if cardValuetoInt c.value < cardValuetoInt active_card.value && c.suit == active_card.suit then
+                        True
+
+                    else
+                        False
+                )
+            |> List.member True
+
+    else if cardValuetoInt active_card.value == 1 then
+        True
+
+    else
+        False
 
 
 moveCardToEmptyColumn : PlayingModel -> ColumnNames -> PlayingModel
@@ -542,7 +624,7 @@ viewUI model =
 viewHeader : PlayingModel -> Element Msg
 viewHeader model =
     row [ width fill, centerY, spacing 30, padding 30 ]
-        [ el [] (text ("header " ++ String.fromInt model.shuffle_count))
+        [ el [] (text ("Shuffles " ++ String.fromInt model.shuffle_count))
         ]
 
 
@@ -593,45 +675,48 @@ viewEndPiles : PlayingModel -> Element Msg
 viewEndPiles model =
     column [ alignRight ]
         [ row [ spacing 30 ]
-            [ column [] [ el [] (text "end 1") ]
-            , column [] [ el [] (text "end 2") ]
-            , column [] [ el [] (text "end 3") ]
-            , column [] [ el [] (text "end 4") ]
+            [ viewEndPile End_A model.endpiles.a model.active_card
+            , viewEndPile End_B model.endpiles.b model.active_card
+            , viewEndPile End_C model.endpiles.c model.active_card
+            , viewEndPile End_D model.endpiles.d model.active_card
             ]
         ]
+
+
+viewEndPile : EndPileNames -> Pile -> Maybe Cards -> Element Msg
+viewEndPile endpile_name endpile_cards active_card =
+    let
+        length =
+            List.length endpile_cards
+    in
+    if length > 0 then
+        column []
+            (List.map
+                (\c -> el [] (viewTopEndCard c endpile_name active_card))
+                (List.drop (length - 1) endpile_cards)
+            )
+
+    else
+        column [] [ el [ onClick (MovedCardToEndPile endpile_name), pointer ] (text "Empty") ]
 
 
 viewColumns : PlayingModel -> Element Msg
 viewColumns model =
     row [ width fill, spacing 30, padding 30 ]
-        [ column [ alignTop, spacing 30 ]
-            [ paragraph [] [ el [] (text "Column A") ]
-            , column [ spacing 10 ] (viewColumn Col_A model.columns.a model.active_card)
-            ]
-        , column [ alignTop, spacing 30 ]
-            [ paragraph [] [ el [] (text "Column B") ]
-            , column [ spacing 10 ] (viewColumn Col_B model.columns.b model.active_card)
-            ]
-        , column [ alignTop, spacing 30 ]
-            [ paragraph [] [ el [] (text "Column C") ]
-            , column [ spacing 10 ] (viewColumn Col_C model.columns.c model.active_card)
-            ]
-        , column [ alignTop, spacing 30 ]
-            [ paragraph [] [ el [] (text "Column D") ]
-            , column [ spacing 10 ] (viewColumn Col_D model.columns.d model.active_card)
-            ]
-        , column [ alignTop, spacing 30 ]
-            [ paragraph [] [ el [] (text "Column E") ]
-            , column [ spacing 10 ] (viewColumn Col_E model.columns.e model.active_card)
-            ]
-        , column [ alignTop, spacing 30 ]
-            [ paragraph [] [ el [] (text "Column F") ]
-            , column [ spacing 10 ] (viewColumn Col_F model.columns.f model.active_card)
-            ]
-        , column [ alignTop, spacing 30 ]
-            [ paragraph [] [ el [] (text "Column G") ]
-            , column [ spacing 10 ] (viewColumn Col_G model.columns.g model.active_card)
-            ]
+        [ column [ alignTop, spacing 10 ]
+            (viewColumn Col_A model.columns.a model.active_card)
+        , column [ alignTop, spacing 10 ]
+            (viewColumn Col_B model.columns.b model.active_card)
+        , column [ alignTop, spacing 10 ]
+            (viewColumn Col_C model.columns.c model.active_card)
+        , column [ alignTop, spacing 10 ]
+            (viewColumn Col_D model.columns.d model.active_card)
+        , column [ alignTop, spacing 10 ]
+            (viewColumn Col_E model.columns.e model.active_card)
+        , column [ alignTop, spacing 10 ]
+            (viewColumn Col_F model.columns.f model.active_card)
+        , column [ alignTop, spacing 10 ]
+            (viewColumn Col_G model.columns.g model.active_card)
         ]
 
 
@@ -694,28 +779,75 @@ viewColumn columnName cardcolumn active_card =
 
 viewCard : Cards -> Maybe Cards -> Element Msg
 viewCard card active_card =
+    let
+        color =
+            if card.color == Red then
+                rgb 0.8 0 0
+
+            else
+                rgb 0.8 0.8 0.8
+    in
     case card.orientation of
         FaceDown ->
-            el [ Background.color (rgb 0.5 0.5 0.5) ] (text "Facedown")
-
-        FaceUp ->
-            el [ Background.color (rgb 0.9 0.9 0.9) ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
-
-
-viewTopCard : Cards -> Maybe Cards -> Element Msg
-viewTopCard card active_card =
-    case card.orientation of
-        FaceDown ->
-            el [ Background.color (rgb 0.5 0.5 0.5), onClick (TurnOverCard card), pointer ] (text "Facedown")
+            el [ padding 4, Background.color (rgb 0.5 0.5 0.5), Font.color (rgb 1 1 1) ] (text "Facedown")
 
         FaceUp ->
             case active_card of
                 Nothing ->
-                    el [ Background.color (rgb 0.9 0.9 0.9), onClick (SelectedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
+                    el [ padding 4, Background.color (rgb 0.5 0.5 0.5), Font.color color, onClick (SelectedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
 
                 Just c ->
                     if c == card then
-                        el [ Background.color (rgb 0 1 0), onClick (SelectedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
+                        el [ padding 6, Background.color (rgb 0 1 0), onClick (SelectedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
 
                     else
-                        el [ Background.color (rgb 0.5 0.5 0.5), onClick (MovedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
+                        el [ padding 4, Background.color (rgb 0.5 0.5 0.5), onClick (MovedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
+
+
+viewTopEndCard : Cards -> EndPileNames -> Maybe Cards -> Element Msg
+viewTopEndCard card endpile active_card =
+    let
+        color =
+            if card.color == Red then
+                rgb 0.8 0 0
+
+            else
+                rgb 0.2 0.2 0.2
+    in
+    case active_card of
+        Nothing ->
+            el [ padding 4, Background.color (rgb 0.9 0.9 0.9), Font.color color, onClick (SelectedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
+
+        Just c ->
+            if c == card then
+                el [ padding 6, Background.color (rgb 0 1 0), onClick (SelectedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
+
+            else
+                el [ padding 4, Background.color (rgb 0.5 0.5 0.5), onClick (MovedCardToEndPile endpile), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
+
+
+viewTopCard : Cards -> Maybe Cards -> Element Msg
+viewTopCard card active_card =
+    let
+        color =
+            if card.color == Red then
+                rgb 0.8 0 0
+
+            else
+                rgb 0.2 0.2 0.2
+    in
+    case card.orientation of
+        FaceDown ->
+            el [ padding 4, Background.color (rgb 0.5 0.5 0.5), Font.color (rgb 1 1 1), onClick (TurnOverCard card), pointer ] (text "Facedown")
+
+        FaceUp ->
+            case active_card of
+                Nothing ->
+                    el [ padding 4, Background.color (rgb 0.9 0.9 0.9), Font.color color, onClick (SelectedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
+
+                Just c ->
+                    if c == card then
+                        el [ padding 6, Background.color (rgb 0 1 0), onClick (SelectedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
+
+                    else
+                        el [ padding 4, Background.color (rgb 0.5 0.5 0.5), onClick (MovedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
