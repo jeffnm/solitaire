@@ -798,10 +798,10 @@ viewCard card active_card =
 
                 Just c ->
                     if c == card then
-                        el [ padding 6, Background.color (rgb 0 1 0), onClick (SelectedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
+                        el [ padding 6, Background.color (rgb 0 1 0), Font.color color, onClick (SelectedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
 
                     else
-                        el [ padding 4, Background.color (rgb 0.5 0.5 0.5), onClick (MovedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
+                        el [ padding 4, Background.color (rgb 0.5 0.5 0.5), Font.color color, onClick (MovedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
 
 
 viewTopEndCard : Cards -> EndPileNames -> Maybe Cards -> Element Msg
@@ -820,10 +820,10 @@ viewTopEndCard card endpile active_card =
 
         Just c ->
             if c == card then
-                el [ padding 6, Background.color (rgb 0 1 0), onClick (SelectedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
+                el [ padding 6, Background.color (rgb 0 1 0), Font.color color, onClick (SelectedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
 
             else
-                el [ padding 4, Background.color (rgb 0.5 0.5 0.5), onClick (MovedCardToEndPile endpile), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
+                el [ padding 4, Background.color (rgb 0.5 0.5 0.5), Font.color color, onClick (MovedCardToEndPile endpile), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
 
 
 viewTopCard : Cards -> Maybe Cards -> Element Msg
@@ -847,7 +847,7 @@ viewTopCard card active_card =
 
                 Just c ->
                     if c == card then
-                        el [ padding 6, Background.color (rgb 0 1 0), onClick (SelectedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
+                        el [ padding 6, Background.color (rgb 0 1 0), Font.color color, onClick (SelectedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
 
                     else
-                        el [ padding 4, Background.color (rgb 0.5 0.5 0.5), onClick (MovedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
+                        el [ padding 4, Background.color (rgb 0.5 0.5 0.5), Font.color color, onClick (MovedCard card), pointer ] (text (cardValueToString card.value ++ " of " ++ suitToString card.suit))
