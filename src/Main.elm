@@ -249,7 +249,7 @@ endpileIsStackable active_card endpile_cards =
         List.drop (length - 1) endpile_cards
             |> List.map
                 (\c ->
-                    if cardValuetoInt c.value < cardValuetoInt active_card.value && c.suit == active_card.suit then
+                    if cardValuetoInt c.value == cardValuetoInt active_card.value - 1 && c.suit == active_card.suit then
                         True
 
                     else
