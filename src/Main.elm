@@ -173,7 +173,11 @@ update msg model =
                     ( Playing (moveCardToEmptyColumn playingmodel column), Cmd.none )
 
                 MovedCardToEndPile endpile ->
-                    ( Playing (moveCardToEndPile playingmodel endpile), Cmd.none )
+                    if winnerCheck playingmodel then
+                        ( Won, Cmd.none )
+
+                    else
+                        ( Playing (moveCardToEndPile playingmodel endpile), Cmd.none )
 
                 TurnOverCard card ->
                     ( Playing (turnOverCard playingmodel card), Cmd.none )
@@ -184,6 +188,39 @@ update msg model =
 
 
 --  HELPER FUNCTIONS
+
+
+winnerCheck : PlayingModel -> Bool
+winnerCheck playingmodel =
+    if
+        (List.length playingmodel.endpiles.a
+            + List.length playingmodel.endpiles.b
+            + List.length playingmodel.endpiles.c
+            + List.length playingmodel.endpiles.d
+        )
+            == 51
+    then
+        True
+
+    else
+        False
+
+
+areColumnsEmpty : Columns -> Bool
+areColumnsEmpty columns =
+    if
+        List.isEmpty columns.a
+            && List.isEmpty columns.b
+            && List.isEmpty columns.c
+            && List.isEmpty columns.d
+            && List.isEmpty columns.e
+            && List.isEmpty columns.f
+            && List.isEmpty columns.g
+    then
+        True
+
+    else
+        False
 
 
 moveCardToEndPile : PlayingModel -> EndPileNames -> PlayingModel
