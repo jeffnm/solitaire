@@ -508,7 +508,7 @@ dealCards ( deck, columns ) =
                     ( rest, columns )
 
             else
-                ( rest, columns )
+                ( List.append rest [ card ], columns )
 
         [] ->
             ( deck, columns )
